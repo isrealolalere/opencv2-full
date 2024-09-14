@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distance Alert System</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        #video-container {
+            width: 640px;
+            height: 480px;
+            background-color: #000;
+            margin-bottom: 20px;
+        }
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        input[type="number"] {
+            margin: 5px 0;
+            padding: 10px;
+            width: 100px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        #message {
+            margin-top: 10px;
+            color: red;
+        }
+        select {
+            margin: 10px 0;
+            padding: 10px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Distance Alert System</h1>
+    <div id="video-container">
+        <video autoplay="true" id="videoElement"></video>
+    </div>
+
+    <div id="controls">
+        <label for="camera-select">Select Camera:</label>
+        <select id="camera-select"></select>
+
+        <label for="min-distance">Minimum Alert Distance (cm):</label>
+        <input type="number" id="min-distance" placeholder="Min Distance" value="50">
+        
+        <label for="max-distance">Maximum Alert Distance (cm):</label>
+        <input type="number" id="max-distance" placeholder="Max Distance" value="70">
+        
+        <button onclick="updateDistances()">Set Distances</button>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        var video = document.querySelector("#videoElement");
+        var cameraSelect = document.getElementById('camera-select');
+
+        // Function to start the video stream from the selected camera
+        function startCamera(deviceId = null) {
+            const constraints = {
+                video: deviceId ? { deviceId: { exact: deviceId } } : true
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(function (stream) {
+                    video.srcObject = stream;
+                })
+                .catch(function (error) {
+                    console.error("Error accessing the camera: ", error);
+                    document.getElementById('message').textContent = "Unable to access camera.";
+                });
+        }
+
+        // Enumerate devices and populate the dropdown with available video inputs
+        navigator.mediaDevices.enumerateDevices()
+            .then(function (devices) {
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                
+                if (videoDevices.length === 0) {
+                    console.log("No video devices found.");
+                    document.getElementById('message').textContent = "No camera found.";
+                    return;
+                }
+
+                // Populate the select dropdown with video devices
+                videoDevices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+
+                // Start with the first camera by default
+                startCamera(videoDevices[0].deviceId);
+
+                // Listen for changes in the camera selection
+                cameraSelect.addEventListener('change', (event) => {
+                    startCamera(event.target.value);
+                });
+            })
+            .catch(function (error) {
+                console.error("Error enumerating devices: ", error);
+            });
+
+        // Initial distance settings
+        let alertDistanceMin = 50;
+        let alertDistanceMax = 70;
+
+        function updateDistances() {
+            const minDistance = parseInt(document.getElementById('min-distance').value);
+            const maxDistance = parseInt(document.getElementById('max-distance').value);
+            const messageElement = document.getElementById('message');
+
+            if (isNaN(minDistance) || isNaN(maxDistance)) {
+                messageElement.textContent = "Please enter valid numbers.";
+                return;
+            }
+
+            if (minDistance >= maxDistance) {
+                messageElement.textContent = "Minimum distance must be less than maximum distance.";
+            } else {
+                alertDistanceMin = minDistance;
+                alertDistanceMax = maxDistance;
+                messageElement.textContent = `Updated alert distances: Min = ${alertDistanceMin} cm, Max = ${alertDistanceMax} cm`;
+            }
+        }
+    </script>
+</body>
+</html>
